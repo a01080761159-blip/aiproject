@@ -1,15 +1,19 @@
-
+import streamlit as st
 import folium
 from streamlit_folium import st_folium
 
-# 페이지 설정
+# =====================================
+# 1. 페이지 설정
+# =====================================
 st.set_page_config(
     page_title="서울 관광 명소 TOP 10",
     page_icon="🗺️",
     layout="wide"
 )
 
-# 관광지 데이터
+# =====================================
+# 2. 관광지 데이터
+# =====================================
 PLACES = [
     {
         "rank": 1,
@@ -26,7 +30,7 @@ PLACES = [
         "category": "전망 · 랜드마크",
         "lat": 37.5512,
         "lon": 126.9882,
-        "description": "남산 정상에 있는 서울의 대표 전망 명소로, 도심 풍경을 감상할 수 있어요.",
+        "description": "남산 정상에 있는 서울의 대표 전망 명소로, 아름다운 서울 풍경을 감상할 수 있어요.",
         "tip": "해 질 무렵 방문하면 낮과 밤의 서울 풍경을 모두 볼 수 있어요."
     },
     {
@@ -103,16 +107,25 @@ PLACES = [
     }
 ]
 
-# 제목
+# =====================================
+# 3. 메인 화면
+# =====================================
 st.title("🗺️ 외국인 관광객이 사랑하는 서울 TOP 10")
-st.caption("서울의 대표 관광 명소를 지도에서 찾아보세요!")
+
+st.markdown("""
+서울의 대표 관광 명소를 한눈에 확인해 보세요!
+
+지도에서 관광지를 클릭하면 각 장소의 설명을 확인할 수 있어요. ✨
+""")
 
 st.info(
-    "이 목록은 서울의 주요 관광지와 외국인 관광객 방문 정보를 참고해 구성한 추천 목록입니다. "
-    "공식적인 통합 순위는 아닙니다."
+    "이 목록은 서울의 주요 관광지와 외국인 관광객 방문 정보를 참고해 "
+    "구성한 추천 목록이며, 공식적인 통합 순위는 아닙니다."
 )
 
-# 서울 지도 생성
+# =====================================
+# 4. 서울 지도 생성
+# =====================================
 m = folium.Map(
     location=[37.5665, 126.9780],
     zoom_start=11,
@@ -120,25 +133,31 @@ m = folium.Map(
     control_scale=True
 )
 
-# 지도에 관광지 마커 표시
+# =====================================
+# 5. 지도에 관광지 마커 표시
+# =====================================
 for place in PLACES:
 
     popup_html = f"""
     <div style="width:220px; font-family:Arial;">
         <h4>{place['rank']}. {place['name']}</h4>
-        <p>{place['category']}</p>
+        <p><b>{place['category']}</b></p>
         <p>{place['description']}</p>
+        <p>💡 {place['tip']}</p>
     </div>
     """
 
     folium.Marker(
         location=[place["lat"], place["lon"]],
         tooltip=f"{place['rank']}위 · {place['name']}",
-        popup=folium.Popup(popup_html, max_width=280),
+        popup=folium.Popup(
+            popup_html,
+            max_width=280
+        ),
         icon=folium.DivIcon(
             html=f"""
             <div style="
-                background:#e84b62;
+                background-color:#e84b62;
                 color:white;
                 border:2px solid white;
                 border-radius:50%;
@@ -149,16 +168,24 @@ for place in PLACES:
                 font-weight:bold;
                 font-size:13px;
                 box-shadow:0 1px 5px rgba(0,0,0,.35);
-            ">{place['rank']}</div>
+            ">
+                {place['rank']}
+            </div>
             """,
             icon_size=(30, 30),
             icon_anchor=(15, 15)
         )
     ).add_to(m)
 
-# 지도 출력
+# =====================================
+# 6. 지도 화면 출력
+# =====================================
 st.subheader("📍 서울 관광지 지도")
-st.write("지도에 표시된 숫자 마커를 클릭하면 관광지 설명을 볼 수 있어요!")
+
+st.write(
+    "지도에 표시된 숫자 마커를 클릭하면 "
+    "관광지 이름과 설명을 확인할 수 있어요!"
+)
 
 st_folium(
     m,
@@ -167,17 +194,24 @@ st_folium(
     returned_objects=[]
 )
 
-# 관광지 소개
+# =====================================
+# 7. 관광지 소개
+# =====================================
 st.divider()
+
 st.subheader("✨ 서울 관광지 TOP 10 소개")
 
 left, right = st.columns(2)
 
 for index, place in enumerate(PLACES):
 
-    target = left if index % 2 == 0 else right
+    if index % 2 == 0:
+        target = left
+    else:
+        target = right
 
     with target:
+
         with st.container(border=True):
 
             st.markdown(
@@ -192,14 +226,29 @@ for index, place in enumerate(PLACES):
                 f"**💡 여행 팁:** {place['tip']}"
             )
 
-            st.markdown(
-                f"[🧭 지도에서 길찾기](https://www.google.com/maps/search/?api=1&query={place['lat']},{place['lon']})"
+            map_url = (
+                "https://www.google.com/maps/search/?api=1"
+                f"&query={place['lat']},{place['lon']}"
             )
 
-# 하단 안내
+            st.markdown(
+                f"[🧭 구글 지도에서 길찾기]({map_url})"
+            )
+
+# =====================================
+# 8. 하단 안내
+# =====================================
 st.divider()
 
+st.markdown("""
+### 🇰🇷 서울 여행을 즐겨 보세요!
+
+서울에는 역사와 전통, 쇼핑, 문화, 맛있는 음식까지
+다양한 매력을 가진 관광지가 있어요.
+
+여러분만의 특별한 서울 여행을 만들어 보세요! 💗
+""")
+
 st.caption(
-    "서울의 대표 관광지를 소개하는 관광 안내 웹앱입니다. "
-    "방문 전 운영 시간과 휴무일을 확인해 주세요."
+    "서울 관광 명소 안내 웹앱 | OpenStreetMap 사용"
 )
