@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import plotly.graph_objects as go
+import os
 
 # 1. 페이지 기본 설정
 st.set_page_config(
@@ -16,12 +17,21 @@ st.markdown("과거 기온 데이터를 바탕으로 **선형회귀(Linear Regre
 
 # 2. 데이터 로드 및 전처리 함수 (캐싱 적용)
 @st.cache_data
-def load_data(file_path):
+def load_data():
+    # pages/ 폴더의 상위 폴더에 있는 temperature.csv 경로 지정
+    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "temperature.csv"))
+    
     # 한국어 CSV(CP949) 및 UTF-8 인코딩 자동 대응
     try:
         df = pd.read_csv(file_path, encoding="cp949")
     except UnicodeDecodeError:
         df = pd.read_csv(file_path, encoding="utf-8")
+    except FileNotFoundError:
+        # 상위 폴더에 없을 경우 현재 폴더나 일반 경로도 시도
+        try:
+            df = pd.read_csv("temperature.csv", encoding="cp949")
+        except:
+            df = pd.read_csv("temperature.csv", encoding="utf-8")
 
     # 컬럼명 공백 제거
     df.columns = df.columns.str.strip()
@@ -46,9 +56,9 @@ def load_data(file_path):
 
 # 데이터 불러오기
 try:
-    df = load_data("temperature.csv")
-except FileNotFoundError:
-    st.error("⚠️ `temperature.csv` 파일을 찾을 수 없습니다. `app.py`와 같은 폴더에 파일을 위치시켜 주세요.")
+    df = load_data()
+except Exception as e:
+    st.error(f"⚠️ `temperature.csv` 파일을 불러오는 중 오류가 발생했습니다. 상위 폴더에 파일이 있는지 확인해주세요.\n\n상세 에러: {e}")
     st.stop()
 
 # 3. 사용자 입력 (사이드바)
