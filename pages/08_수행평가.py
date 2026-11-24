@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+import random
 from collections import Counter
 
 # ---------------------------------------------------------
@@ -22,10 +23,10 @@ st.markdown("""
     .title-box {
         background: linear-gradient(135deg, #FFE5EC 0%, #FFF0F3 100%);
         padding: 24px;
-        border-radius: 20px;
+        border-radius: 22px;
         text-align: center;
         border: 2px dashed #FFB3C6;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
     }
     .title-box h1 {
         color: #D6336C;
@@ -36,13 +37,14 @@ st.markdown("""
         color: #6D4C5D;
         font-size: 14.5px;
         margin: 0;
+        line-height: 1.5;
     }
     /* 순위 카드 스타일 */
     .rank-card {
         background-color: #FFFFFF;
         border-radius: 18px;
         padding: 18px 20px;
-        margin-top: 12px;
+        margin-top: 14px;
         margin-bottom: 8px;
         border: 2px solid #FFE3EC;
         box-shadow: 0 4px 12px rgba(255, 179, 198, 0.15);
@@ -73,6 +75,15 @@ st.markdown("""
         border-radius: 12px;
         color: #5C3A42;
         font-size: 14px;
+        margin-bottom: 8px;
+    }
+    .trio-badge {
+        background-color: #F0FDF4;
+        border: 1px dashed #86EFAC;
+        color: #166534;
+        padding: 7px 12px;
+        border-radius: 10px;
+        font-size: 13px;
         margin-bottom: 10px;
     }
     .recipe-tag {
@@ -124,7 +135,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. 재료별 한글 이름 & 센스 있는 이모지 매핑 사전
+# 2. 전체 77개 재료 한글 이름 & 센스 있는 이모지 & 추천 이유 사전
 # ---------------------------------------------------------
 INGREDIENT_INFO = {
     "vanilla": ("바닐라", "🌼", "달콤하고 부드러운 향으로 모든 재료의 풍미를 포근하게 감싸줘요."),
@@ -184,6 +195,26 @@ INGREDIENT_INFO = {
     "basil": ("바질", "🍃", "상큼하고 향긋한 허브 풍미가 더해져 색다르고 감각적인 맛을 완성해요."),
     "ricotta": ("리코타", "🥛", "담백하고 몽글몽글한 우유의 고소함이 재료 본연의 맛을 살려줘요."),
     "chestnut": ("밤", "🌰", "포근하고 달콤한 고소함이 더해져 깊고 부드러운 계절감을 선사해요."),
+    "anise": ("아니스", "⭐", "은은한 감초 향과 달콤한 여운이 더해져 개성 있고 향긋한 풍미를 만들어요."),
+    "bay": ("월계수 잎", "🍃", "은은하고 깔끔한 허브 향이 느끼함을 잡아주고 깊고 깔끔한 여운을 더해줘요."),
+    "carrot": ("당근", "🥕", "자연스러운 단맛과 촉촉한 식감이 더해져 포근하고 건강한 맛을 완성해 줘요."),
+    "cashew": ("캐슈넛", "🥜", "부드럽고 크리미한 고소함이 더해져 디저트나 크림을 한층 매끄럽게 만들어 줘요."),
+    "champagne": ("샴페인", "🥂", "톡 쏘는 산미와 화사한 향이 더해져 특별하고 우아한 분위기를 내줘요."),
+    "curry": ("커리", "🍛", "다채로운 향신료의 따뜻한 풍미가 더해져 이국적이고 매력적인 맛을 살려줘요."),
+    "fennel": ("펜넬(회향)", "🌿", "산뜻하면서도 달큰한 허브 향이 재료의 맛을 깔끔하고 세련되게 살려줘요."),
+    "grape": ("포도", "🍇", "달콤하고 싱그러운 과즙이 더해져 입안 가득 상큼한 풍미를 전해줘요."),
+    "marshmallow": ("마시멜로", "☁️", "구름처럼 폭신하고 달콤한 식감이 더해져 귀엽고 부드러운 맛을 완성해 줘요."),
+    "pepper": ("후추", "🖤", "알싸한 스파이스 향이 살짝 더해져 단맛을 돋우고 입맛을 깔끔하게 잡아줘요."),
+    "pomegranate": ("석류", "❤️", "톡톡 터지는 과즙과 상큼새콤한 맛이 더해져 화사한 색감과 생기를 줘요."),
+    "pretzel": ("프레첼", "🥨", "짭조름하고 바삭한 식감이 달콤한 재료와 만나 매력적인 단짠 조화를 이뤄요."),
+    "saffron": ("사프란", "🌼", "황금빛 색감과 고급스러운 꽃향기가 더해져 특별하고 우아한 풍미를 내줘요."),
+    "tahini": ("타히니(참깨)", "🫙", "고소하고 묵직한 참깨 풍미가 달콤한 맛과 만나 깊고 독특한 매력을 줘요."),
+    "tarragon": ("타라곤", "🌿", "은은한 아니스 향과 상쾌한 허브 노트가 더해져 세련된 풍미를 완성해 줘요."),
+    "tequila": ("데킬라", "🌵", "깔끔하고 개성 있는 풍미가 시트러스나 과일과 만나 경쾌한 맛을 내줘요."),
+    "vodka": ("보드카", "🧊", "재료 본연의 향과 맛을 깔끔하게 살려주며 산뜻한 여운을 남겨줘요."),
+    "whiskey": ("위스키", "🥃", "깊은 오크향과 묵직한 풍미가 더해져 진하고 어른스러운 맛을 완성해 줘요."),
+    "yam": ("고구마", "🍠", "달콤하고 포슬포슬한 식감이 더해져 따뜻하고 든든한 풍미를 선사해요."),
+    "zucchini": ("주키니", "🥒", "수분감과 담백한 맛이 더해져 구움과자나 요리를 촉촉하고 가볍게 만들어 줘요."),
 }
 
 # ---------------------------------------------------------
@@ -238,19 +269,13 @@ EXTRA_WORD_MAP = {
 }
 
 def translate_menu_to_korean(eng_title, base_key, partner_key):
-    """영문 레시피명을 자연스러운 한글 메뉴명으로 변환"""
     text = eng_title.lower()
-    
-    # 1) 요리 카테고리(디저트 종류) 찾기
     detected_dish = "디저트"
-    detected_dish_eng = ""
     for eng_k in sorted(DISH_TERMS.keys(), key=len, reverse=True):
         if eng_k in text:
             detected_dish = DISH_TERMS[eng_k]
-            detected_dish_eng = eng_k
             break
             
-    # 2) 수식어 찾기
     modifiers = []
     for mod_eng, mod_kr in MODIFIER_TERMS.items():
         if re.search(rf"\b{mod_eng}\b", text):
@@ -258,16 +283,13 @@ def translate_menu_to_korean(eng_title, base_key, partner_key):
             if len(modifiers) == 1:
                 break
 
-    # 3) 본문에 등장하는 재료들 한글로 수집
     found_ings = []
-    # 우선 선택한 두 재료가 제목에 있으면 순서대로 반영
     for key in [base_key, partner_key]:
         if key in text and key in INGREDIENT_INFO:
             kr_name = INGREDIENT_INFO[key][0].split("(")[0]
             if kr_name not in found_ings:
                 found_ings.append(kr_name)
                 
-    # 제목에 있는 다른 재료 키워드 추가
     for key, (kr, _, _) in INGREDIENT_INFO.items():
         if re.search(rf"\b{key}\b", text):
             clean_kr = kr.split("(")[0]
@@ -280,7 +302,6 @@ def translate_menu_to_korean(eng_title, base_key, partner_key):
             if len(found_ings) >= 3:
                 break
 
-    # 만약 제목에서 재료가 1개 이하로 잡히면 선택된 두 재료를 기본으로 넣어줌
     if len(found_ings) < 2:
         b_kr = INGREDIENT_INFO.get(base_key, (base_key,))[0].split("(")[0]
         p_kr = INGREDIENT_INFO.get(partner_key, (partner_key,))[0].split("(")[0]
@@ -290,17 +311,13 @@ def translate_menu_to_korean(eng_title, base_key, partner_key):
 
     ing_phrase = " ".join(found_ings[:3])
     mod_phrase = f"{modifiers[0]} " if modifiers else ""
-    
-    # '소스/글레이즈/크림' 등이 뒷부분에 붙는 경우 자연스럽게 연결
     korean_name = f"{mod_phrase}{ing_phrase} {detected_dish}".strip()
     return korean_name, detected_dish
 
 def get_cooking_steps(kr_menu_name, dish_type, base_key, partner_key):
-    """메뉴의 디저트 유형과 재료 특성을 반영한 단계별 만드는 과정 생성"""
     b_name = INGREDIENT_INFO.get(base_key, (base_key,))[0].split("(")[0]
     p_name = INGREDIENT_INFO.get(partner_key, (partner_key,))[0].split("(")[0]
 
-    # 카테고리별 맞춤 베이킹/조리 공정 템플릿
     if any(k in dish_type for k in ["타르트", "파이", "갈레트", "타르틀렛"]):
         return [
             f"**1. 타르트지(파트 사브레) 준비:** 차가운 버터와 박력분, 설탕을 소보로 상태로 만든 뒤 노른자를 넣고 한 덩어리로 뭉쳐 냉장 휴지합니다.",
@@ -354,25 +371,19 @@ def get_cooking_steps(kr_menu_name, dish_type, base_key, partner_key):
 def get_display_name(key):
     if key in INGREDIENT_INFO:
         kr, emoji, _ = INGREDIENT_INFO[key]
-        return f"{emoji} {kr} ({key})"
-    return f"🍽️ {key.capitalize()}"
-
-def get_short_name(key):
-    if key in INGREDIENT_INFO:
-        kr, emoji, _ = INGREDIENT_INFO[key]
         return f"{emoji} {kr}"
     return f"🍽️ {key.capitalize()}"
 
 def get_reason(base_key, pair_key):
-    base_name = get_short_name(base_key)
-    pair_name = get_short_name(pair_key)
+    base_name = get_display_name(base_key)
+    pair_name = get_display_name(pair_key)
     if pair_key in INGREDIENT_INFO:
         desc = INGREDIENT_INFO[pair_key][2]
         return f"{base_name}에 {pair_name}을(를) 더하면, {desc}"
     return f"{base_name}의 풍미를 {pair_name}이(가) 조화롭게 받쳐주어 훌륭한 밸런스를 만들어줘요."
 
 # ---------------------------------------------------------
-# 4. 데이터 로드 및 궁합 분석 함수 (기본 pandas만 활용)
+# 4. 데이터 로드 및 궁합 + 삼각(트리오) 조합 분석 함수
 # ---------------------------------------------------------
 @st.cache_data
 def load_data():
@@ -396,7 +407,9 @@ def load_data():
         all_counter.update(unique_words)
         
     df["flavor_list"] = cleaned_lists
-    valid_ingredients = sorted([k for k, v in all_counter.items() if v >= 10])
+    valid_ingredients = [k for k, v in all_counter.items() if v >= 10]
+    # 한글 가나다순으로 깔끔하게 정렬
+    valid_ingredients.sort(key=lambda x: INGREDIENT_INFO.get(x, (x,))[0])
     return df, valid_ingredients
 
 def recommend_pairings(df, selected_ing, exclude_common=False):
@@ -419,13 +432,20 @@ def recommend_pairings(df, selected_ing, exclude_common=False):
     for partner, score in top3:
         both_df = matched_df[matched_df["flavor_list"].apply(lambda x: partner in x)]
         both_df = both_df.sort_values(by=["rating", "success"], ascending=False)
-        raw_recipes = both_df["recipe_name"].drop_duplicates().head(3).tolist()
         
+        # 3번째 킥 재료(트리오 궁합) 계산
+        third_counter = Counter()
+        for f_list in both_df["flavor_list"]:
+            for item in f_list:
+                if item not in {selected_ing, partner} and item not in common_base:
+                    third_counter[item] += 1
+        third_best = third_counter.most_common(1)[0][0] if third_counter else None
+
+        raw_recipes = both_df["recipe_name"].drop_duplicates().head(3).tolist()
         translated_recipes = []
         seen_kr = set()
         for r_eng in raw_recipes:
             kr_name, dish_type = translate_menu_to_korean(r_eng, selected_ing, partner)
-            # 중복 한글명 방지
             if kr_name in seen_kr:
                 kr_name = f"{kr_name} 스페셜"
             seen_kr.add(kr_name)
@@ -438,6 +458,7 @@ def recommend_pairings(df, selected_ing, exclude_common=False):
         results.append({
             "partner": partner,
             "count": pair_counts[partner],
+            "third_kick": third_best,
             "recipes": translated_recipes
         })
     return results, len(matched_df)
@@ -448,40 +469,88 @@ def recommend_pairings(df, selected_ing, exclude_common=False):
 st.markdown("""
 <div class="title-box">
     <h1>🧁 찰떡궁합 재료 매칭 연구소 🍓</h1>
-    <p>재료를 하나 골라주시면, 수천 개의 레시피 데이터를 분석해<br>가장 잘 어울리는 단짝 재료 TOP 3와 한글 메뉴, 만드는 과정까지 알려드려요!</p>
+    <p>재료를 하나 골라주시면 수천 개의 레시피 데이터를 분석해<br>단짝 재료 TOP 3와 시너지 킥 재료, 한글 메뉴와 레시피 과정까지 알려드려요!</p>
 </div>
 """, unsafe_allow_html=True)
 
-# 버튼 토글 상태를 기억하기 위한 session_state 초기화
+# 상태 관리 초기화
 if "open_recipe_key" not in st.session_state:
     st.session_state.open_recipe_key = None
+if "saved_ideas" not in st.session_state:
+    st.session_state.saved_ideas = []
+if "selected_ing_state" not in st.session_state:
+    st.session_state.selected_ing_state = "strawberry"
 
 try:
     df, valid_ingredients = load_data()
 
+    # 사이드바: 추천 옵션 + 나만의 아이디어 메모장
     with st.sidebar:
         st.header("🎀 추천 옵션 설정")
         exclude_common = st.checkbox(
             "🌼 기본 베이스 재료 제외하기",
             value=False,
-            help="체크하면 어디에나 잘 어울리는 '바닐라'와 '레몬'을 제외하고 더 개성 있는 단짝 재료를 추천해 드려요!"
+            help="어디에나 잘 어울리는 '바닐라'와 '레몬'을 제외하고 더 개성 있는 단짝 재료를 추천해 드려요!"
         )
+        
         st.divider()
-        st.caption("📊 총 7,200여 개의 실제 레시피 데이터와 평점을 바탕으로 분석합니다.")
+        st.header("💖 나만의 메뉴 아이디어 노트")
+        if not st.session_state.saved_ideas:
+            st.caption("마음에 드는 조합 아래의 [📌 아이디어 찜하기] 버튼을 누르면 이곳에 차곡차곡 저장돼요!")
+        else:
+            for idx, memo in enumerate(st.session_state.saved_ideas):
+                st.markdown(f"**{idx+1}. {memo['pair']}**")
+                st.caption(f"추천 메뉴: {', '.join(memo['menus'])}")
+            
+            # 메모장 텍스트 파일 다운로드 기능
+            memo_text = "🧁 나의 찰떡궁합 디저트/요리 아이디어 노트 🍓\n" + "="*45 + "\n\n"
+            for idx, memo in enumerate(st.session_state.saved_ideas):
+                memo_text += f"[{idx+1}] 조합: {memo['pair']}\n"
+                memo_text += f"    - 시너지 포인트: {memo['reason']}\n"
+                memo_text += f"    - 추천 메뉴: {', '.join(memo['menus'])}\n\n"
+                
+            st.download_button(
+                label="📥 아이디어 노트 저장 (.txt)",
+                data=memo_text,
+                file_name="my_recipe_ideas.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+            if st.button("🗑️ 노트 비우기", use_container_width=True):
+                st.session_state.saved_ideas = []
+                st.rerun()
 
-    default_idx = valid_ingredients.index("strawberry") if "strawberry" in valid_ingredients else 0
+        st.divider()
+        st.caption("📊 7,200여 개의 실제 레시피 데이터와 평점을 바탕으로 분석합니다.")
 
-    selected_ing = st.selectbox(
-        "✨ 오늘의 주인공 재료를 선택해 주세요!",
-        options=valid_ingredients,
-        index=default_idx,
-        format_func=get_display_name
-    )
+    # 메인 선택 영역 + 랜덤 뽑기 버튼
+    if st.session_state.selected_ing_state not in valid_ingredients:
+        st.session_state.selected_ing_state = valid_ingredients[0]
+
+    col_sel, col_rand = st.columns([3.2, 1.3])
+    with col_rand:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("🎲 랜덤 영감 뽑기", use_container_width=True):
+            st.session_state.selected_ing_state = random.choice(valid_ingredients)
+            st.session_state.open_recipe_key = None
+            st.rerun()
+
+    with col_sel:
+        current_idx = valid_ingredients.index(st.session_state.selected_ing_state)
+        selected_ing = st.selectbox(
+            "✨ 오늘의 주인공 재료를 선택해 주세요! (가나다순)",
+            options=valid_ingredients,
+            index=current_idx,
+            format_func=get_display_name
+        )
+        if selected_ing != st.session_state.selected_ing_state:
+            st.session_state.selected_ing_state = selected_ing
+            st.session_state.open_recipe_key = None
 
     recommendations, total_recipes = recommend_pairings(df, selected_ing, exclude_common)
 
     st.markdown(
-        f"##### 🔍 **{get_short_name(selected_ing)}**이(가) 들어간 레시피 **{total_recipes:,}개**를 분석한 결과예요!"
+        f"##### 🔍 **{get_display_name(selected_ing)}**이(가) 들어간 레시피 **{total_recipes:,}개**를 분석한 결과예요!"
     )
 
     if not recommendations:
@@ -496,11 +565,18 @@ try:
         for idx, item in enumerate(recommendations):
             partner = item["partner"]
             count = item["count"]
+            third_kick = item["third_kick"]
             recipes = item["recipes"]
             badge_text, badge_class = rank_styles[idx]
             reason = get_reason(selected_ing, partner)
 
-            # 한글 메뉴 태그 HTML 생성
+            trio_html = ""
+            if third_kick:
+                trio_html = (
+                    f'<div class="trio-badge">✨ <b>환상의 삼각 궁합 팁:</b> 여기에 '
+                    f'<b>{get_display_name(third_kick)}</b>까지 살짝 더하면 풍미가 한층 깊어져요!</div>'
+                )
+
             recipe_tags_html = "".join([
                 f'<span class="recipe-tag">🍽️ {r["kr_name"]}</span>' for r in recipes
             ])
@@ -510,27 +586,39 @@ try:
                 <span class="rank-badge {badge_class}">{badge_text}</span>
                 <div class="ing-title">{get_display_name(partner)} <span style="font-size:13px; color:#888; font-weight:normal;">(함께 쓰인 레시피 {count}건)</span></div>
                 <div class="reason-text">💡 <b>추천 이유:</b> {reason}</div>
-                <div style="font-size:13.5px; color:#6D4C5D; font-weight:bold; margin-bottom:6px;">👩‍🍳 이 조합으로 만들 수 있는 추천 메뉴 (아래 버튼을 눌러 레시피 과정을 확인하세요!):</div>
+                {trio_html}
+                <div style="font-size:13.5px; color:#6D4C5D; font-weight:bold; margin-bottom:6px;">👩‍🍳 이 조합으로 만들 수 있는 추천 메뉴:</div>
                 <div>{recipe_tags_html}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            # 각 추천 메뉴별 "만드는 과정 보기" 버튼 배치
-            btn_cols = st.columns(len(recipes))
+            # 각 추천 메뉴별 "만드는 법" 버튼 + "아이디어 찜하기" 버튼 배치
+            btn_cols = st.columns(len(recipes) + 1)
             for r_idx, r_info in enumerate(recipes):
                 unique_btn_id = f"{selected_ing}_{partner}_{r_idx}"
                 is_opened = (st.session_state.open_recipe_key == unique_btn_id)
-                btn_label = f"🔽 {r_info['kr_name']} 닫기" if is_opened else f"📖 {r_info['kr_name']} 만드는 법"
+                btn_label = f"🔽 {r_info['kr_name']} 닫기" if is_opened else f"📖 {r_info['kr_name']}"
                 
                 with btn_cols[r_idx]:
                     if st.button(btn_label, key=f"btn_{unique_btn_id}", use_container_width=True):
-                        if is_opened:
-                            st.session_state.open_recipe_key = None
-                        else:
-                            st.session_state.open_recipe_key = unique_btn_id
+                        st.session_state.open_recipe_key = None if is_opened else unique_btn_id
                         st.rerun()
 
-            # 현재 순위 카드에 속한 메뉴 버튼이 눌려있다면 만드는 과정 박스 표시
+            # 아이디어 찜하기 버튼
+            with btn_cols[-1]:
+                pair_label = f"{get_display_name(selected_ing)} × {get_display_name(partner)}"
+                if st.button("📌 조합 찜하기", key=f"save_{selected_ing}_{partner}", use_container_width=True):
+                    if not any(m["pair"] == pair_label for m in st.session_state.saved_ideas):
+                        st.session_state.saved_ideas.append({
+                            "pair": pair_label,
+                            "reason": reason,
+                            "menus": [r["kr_name"] for r in recipes]
+                        })
+                        st.toast(f"'{pair_label}' 조합을 왼쪽 아이디어 노트에 저장했어요! 💖")
+                    else:
+                        st.toast("이미 아이디어 노트에 저장된 조합이에요! 😊")
+
+            # 눌린 메뉴의 만드는 과정 박스 표시
             for r_idx, r_info in enumerate(recipes):
                 unique_btn_id = f"{selected_ing}_{partner}_{r_idx}"
                 if st.session_state.open_recipe_key == unique_btn_id:
